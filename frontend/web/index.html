@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Face Swap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+
+        video, canvas {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            width: 480px;
+            height: 360px;
+            object-fit: cover;
+        }
+
+        .video-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .status-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #e8ecff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover .upload-icon {
+            color: #667eea;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .status-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-active {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-inactive {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-top: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            video, canvas {
+                width: 100%;
+                max-width: 400px;
+                height: 300px;
+            }
+
+            .upload-section {
+                width: 100%;
+                max-width: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 Award-Winning Face Swap AI</h1>
+        <p>Experience ultra-smooth real-time face swapping with advanced feature matching</p>
+    </div>
+
+    <div class="main-container">
+        <div class="video-section">
+            <h3>Live Camera Feed</h3>
+            <div class="video-container">
+                <video id="videoElement" autoplay muted></video>
+                <canvas id="outputCanvas" style="display: none;"></canvas>
+                <div class="status-overlay" id="videoStatus">Initializing...</div>
+            </div>
+            <div class="controls">
+                <button class="btn" id="startBtn">Start Camera</button>
+                <button class="btn btn-secondary" id="stopBtn" disabled>Stop Camera</button>
+                <button class="btn" id="clearBtn" disabled>Clear Face</button>
+            </div>
+        </div>
+
+        <div class="upload-section">
+            <h3>Upload Reference Face</h3>
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📷</div>
+                <p>Drag & drop an image or click to select</p>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">
+                    Supported: JPG, PNG, WebP
+                </p>
+            </div>
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+            <div id="previewContainer"></div>
+            <button class="btn" id="uploadBtn" disabled>Upload Face</button>
+        </div>
+    </div>
+
+    <div class="status-section">
+        <h3>System Status</h3>
+        <div class="status-item">
+            <span>
+                <span class="status-indicator status-inactive" id="cameraStatus"></span>
+                Camera Feed
+            </span>
+            <span id="cameraStatusText">Not Active</span>
+        </div>
+        <div class="status-item">
+            <span>
+                <span class="status-indicator status-inactive" id="faceStatus"></span>
+                Reference Face
+            </span>
+            <span id="faceStatusText">Not Loaded</span>
+        </div>
+        <div class="status-item">
+            <span>
+                <span class="status-indicator status-inactive" id="swapStatus"></span>
+                Face Swapping
+            </span>
+            <span id="swapStatusText">Inactive</span>
+        </div>
+        <div class="status-item">
+            <span>
+                <span class="status-indicator status-inactive" id="aiStatus"></span>
+                AI Service
+            </span>
+            <span id="aiStatusText">Checking...</span>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

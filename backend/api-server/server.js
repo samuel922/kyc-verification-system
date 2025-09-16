@@ -10,7 +10,16 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "http://localhost:8000"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      mediaSrc: ["'self'", "blob:"]
+    }
+  }
+}));
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:19006'],
   credentials: true
@@ -26,10 +35,18 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Routes
-app.use('/api/v1/auth', require('./routes/auth'));
-app.use('/api/v1/upload', require('./routes/upload'));
-app.use('/api/v1/verification', require('./routes/verification'));
+// Serve frontend
+app.use(express.static(path.join(__dirname, '../../frontend/web')));
+
+// Routes - Face Swap API
+app.use('/api/v1/faceswap', require('./routes/verification'));
+
+// Serve frontend for any non-API routes
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, '../../frontend/web/index.html'));
+  }
+});
 
 // Health check
 app.get('/health', (req, res) => {
